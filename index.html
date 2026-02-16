@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>有一則新訊息...</title>
+<link rel="icon" href="instagram_logo.png" type="image/png">
+
+<style>
+  /* --- 🎨 Theme Settings --- */
+  :root {
+    --glass-surface: rgba(255, 255, 255, 0.02);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-blur: blur(12px);
+    
+    --bubble-me-bg: linear-gradient(135deg, rgba(168, 110, 122, 0.7), rgba(194, 142, 154, 0.8));
+    --bubble-me-shadow: 0 4px 10px rgba(168, 110, 122, 0.2);
+    --bubble-her-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    --bubble-her-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    --ig-gradient: linear-gradient(135deg, #6558f5, #8a6efc);
+
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    
+    /* ⚡️ 動畫核心參數 */
+    --anim-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --anim-smooth: cubic-bezier(0.4, 0, 0.2, 1);      
+    --speed: 0.8s;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    color: var(--text-primary);
+  }
+
+  /* --- 🌌 背景 --- */
+  .aurora-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 50%, #1a0b14 0%, #000000 100%);
+    z-index: 0;
+  }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.4;
+    animation: floatBlob 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .blob-1 { top: 30%; left: 20%; width: 400px; height: 400px; background: #6b2c45; }
+  .blob-2 { bottom: 20%; right: 20%; width: 350px; height: 350px; background: #1f2b5c; animation-delay: -5s; }
+  @keyframes floatBlob {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  #starCanvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1; opacity: 0.8; pointer-events: none;
+  }
+
+  /* --- 🎭 主舞台 --- */
+  #main-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%; height: 100%;
+    gap: 0px; 
+    transition: gap var(--speed) var(--anim-smooth);
+    z-index: 10;
+  }
+
+  #main-stage.mode-active {
+    gap: 40px; 
+  }
+
+  /* --- 📱 通用面板設定 --- */
+  .glass-panel {
+    height: auto; max-height: 85vh; 
+    border-radius: 48px;
+    background: var(--glass-surface);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0; 
+    
+    width: 0; 
+    opacity: 0;
+    transform: scale(0.9);
+    
+    transition: 
+      width var(--speed) var(--anim-smooth), 
+      opacity var(--speed) var(--anim-smooth), 
+      transform var(--speed) var(--anim-spring),
+      border-width 0s linear 0.8s; 
+      
+    border-width: 0px; 
+  }
+
+  /* --- 1. 左側：照片區 --- */
+  #panel-photo {
+    display: flex; justify-content: center; align-items: center;
+    transform-origin: right center; 
+  }
+  
+  #panel-photo.active {
+    width: 350px; 
+    opacity: 1; 
+    transform: scale(1);
+    border-width: 1px;
+    transition: 
+      width var(--speed) var(--anim-smooth), 
+      opacity var(--speed) var(--anim-smooth), 
+      transform var(--speed) var(--anim-spring),
+      border-width 0s; 
+  }
+
+  .photo-img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 5s;
+  }
+  #panel-photo.active .photo-img { transform: scale(1.1); }
+
+
+  /* --- 2. 中間：聊天室 --- */
+  #panel-chat {
+    width: 414px; opacity: 1; transform: scale(1);
+    display: flex; flex-direction: column; position: relative;
+    aspect-ratio: 9 / 18;
+    border-width: 1px; 
+    z-index: 5; 
+  }
+
+
+  /* --- 3. 右側：卡片區 --- */
+  #panel-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px; text-align: center;
+    transform-origin: left center; 
+  }
+
+  #panel-card.active {
+    width: 350px; 
+    opacity: 1; 
+    transform: scale(1);
+    border-width: 1px;
+    transition: 
+      width var(--speed) var(--anim-smooth), 
+      opacity var(--speed) var(--anim-smooth), 
+      transform var(--speed) var(--anim-spring),
+      border-width 0s;
+  }
+
+  .letter-content {
+    opacity: 0; transform: translateY(20px);
+    transition: all 0.5s var(--anim-smooth);
+    width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  #panel-card.active .letter-content {
+    opacity: 1; transform: translateY(0);
+    transition-delay: 0.4s; 
+  }
+
+
+  /* --- UI 元件 --- */
+  .close-card-btn {
+    position: absolute; top: 20px; right: 20px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 50; transition: 0.3s;
+    opacity: 0; transform: scale(0);
+  }
+  #panel-card.active .close-card-btn { opacity: 1; transform: scale(1); transition-delay: 0.6s; }
+  .close-card-btn:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg); }
+  .close-icon { font-size: 20px; color: white; line-height: 1; }
+
+  /* Header */
+  .header { height: 70px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0, 0, 0, 0.05); z-index: 20; }
+  .back-arrow { font-size: 24px; margin-right: 15px; cursor: pointer; opacity: 0.9; }
+  .header-avatar { width: 38px; height: 38px; border-radius: 50%; background-image: url('me.jpg'); background-size: cover; margin-right: 15px; border: 1.5px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+  .header-name { font-weight: 600; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { margin-left: auto; display: flex; gap: 20px; opacity: 0.9; }
+
+  /* Chat List */
+  .chat-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; scroll-behavior: smooth; mask-image: linear-gradient(to bottom, transparent 0%, black 2%, black 98%, transparent 100%); }
+  .chat-area::-webkit-scrollbar { display: none; }
+
+  .date-stamp { text-align: center; color: var(--text-secondary); font-size: 12px; font-weight: 500; margin: 30px 0 15px 0; opacity: 0; animation: fadeIn 1.2s forwards; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 20px; align-self: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.05); }
+  .message-row { display: flex; align-items: flex-end; margin-bottom: 16px; opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); justify-content: flex-start; }
+  .message-row.show { opacity: 1; transform: translateY(0) scale(1); }
+  .avatar-small { width: 32px; height: 32px; border-radius: 50%; background-image: url('me.jpg'); background-size: cover; margin-right: 12px; margin-bottom: 2px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
+  .bubble { max-width: 78%; padding: 12px 16px; border-radius: 22px; font-size: 15px; line-height: 1.6; background: var(--bubble-me-bg); box-shadow: var(--bubble-me-shadow); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); }
+
+  .ig-media-bubble { background: var(--ig-gradient); color: white; padding: 10px 18px 10px 14px; border-radius: 20px; border-bottom-left-radius: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 5px 15px rgba(101, 88, 245, 0.4); transition: transform 0.2s; font-weight: 600; font-size: 15px; border: 1px solid rgba(255,255,255,0.2); }
+  .ig-media-bubble:active { transform: scale(0.95); }
+  .ig-icon-circle { width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.6); border-top: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .play-icon { font-size: 11px; line-height: 1; margin-left: 2px; }
+
+  .typing-container { display: none; justify-content: flex-start; padding: 0 20px; margin-bottom: 15px; }
+  .typing-bubble { background: var(--bubble-her-bg); box-shadow: var(--bubble-her-shadow); border: 1px solid rgba(255,255,255,0.15); padding: 12px 18px; border-radius: 22px; border-bottom-left-radius: 4px; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(8px); }
+  .dot { width: 6px; height: 6px; background-color: rgba(255,255,255,0.9); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+  .dot:nth-child(1) { animation-delay: -0.32s; } .dot:nth-child(2) { animation-delay: -0.16s; } 
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .footer { height: 80px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 0 20px 10px 20px; background: rgba(0,0,0,0.1); backdrop-filter: blur(15px); }
+  .camera-btn { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-right: 15px; font-size: 18px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+  .input-bar { flex: 1; height: 40px; background: rgba(255,255,255,0.05); border-radius: 22px; display: flex; align-items: center; padding: 0 16px; color: rgba(255,255,255,0.6); font-size: 15px; border: 1px solid rgba(255,255,255,0.15); }
+
+  #passwordLayer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(25px); opacity: 0; transition: opacity 0.5s; }
+  .lock-box { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.2); text-align: center; width: 85%; max-width: 320px; backdrop-filter: blur(15px); }
+  .shake { animation: shake 0.5s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 25% {transform:translateX(-10px);} 75% {transform:translateX(10px);} }
+
+  .pwd-input { width: 100%; padding: 15px; margin: 25px 0; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 18px; font-size: 26px; text-align: center; outline: none; letter-spacing: 12px; transition: 0.3s; }
+  .pwd-input:focus { border-color: rgba(194, 142, 154, 0.8); box-shadow: 0 0 20px rgba(168, 110, 122, 0.4); }
+  
+  .unlock-msg-btn, .unlock-btn { background: linear-gradient(135deg, rgba(168, 110, 122, 0.8), rgba(194, 142, 154, 0.8)); color: white; padding: 14px 30px; width: 100%; border-radius: 25px; font-weight: 600; font-size: 15px; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 10px 30px rgba(168, 110, 122, 0.3), inset 0 1px 0 rgba(255,255,255,0.3); transition: all 0.3s; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+  .unlock-msg-btn:hover, .unlock-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(168, 110, 122, 0.5); }
+  .message-row.system-row { justify-content: center; margin-top: 25px; width: 100%; }
+
+  .card-photo { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin-bottom: 30px; box-shadow: 0 10px 50px rgba(168, 110, 122, 0.6); border: 4px solid rgba(255,255,255,0.9); }
+  
+  /* ✨✨ 修改處：讓文字區域可以捲動 ✨✨ */
+  .final-msg { 
+    font-family: 'Noto Serif TC', serif; 
+    color: #fff; 
+    line-height: 2.2; 
+    font-size: 15px; 
+    margin-top: 20px; 
+    max-width: 320px; 
+    text-shadow: 0 2px 15px rgba(0,0,0,0.8);
+    
+    /* 捲動設定 */
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+    
+    /* 美化捲軸 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.4) transparent;
+  }
+  
+  /* Webkit 捲軸樣式 */
+  .final-msg::-webkit-scrollbar { width: 4px; }
+  .final-msg::-webkit-scrollbar-track { background: transparent; }
+  .final-msg::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 10px; }
+
+  /* --- 🚀 Performance / Smoothness --- */
+  .glass-panel, .message-row, .blob, .photo-img, #starCanvas {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+  .chat-area { -webkit-overflow-scrolling: touch; }
+
+  @media (max-width: 800px) {
+    #main-stage { flex-direction: column; }
+    .glass-panel { width: 90% !important; max-width: 400px; }
+    #panel-photo.active, #panel-card.active { height: 300px; }
+  }
+
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="aurora-bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+</div>
+
+<canvas id="starCanvas"></canvas>
+
+<div id="main-stage">
+  
+  <div class="glass-panel" id="panel-photo" onclick="closePhotoView()">
+    <img src="20251011.jpg" class="photo-img" alt="Secret Photo">
+  </div>
+
+  <div class="glass-panel" id="panel-chat">
+    <div class="header">
+      <div class="back-arrow">←</div>
+      <div class="header-avatar"></div>
+      <div><div class="header-name">張軒浩</div></div> 
+      <div class="header-actions">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 20px;"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea"></div>
+
+    <div class="typing-container" id="typingContainer">
+      <div class="avatar-small"></div>
+      <div class="typing-bubble">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="camera-btn">📷</div>
+      <div class="input-bar">發送訊息...</div>
+    </div>
+
+    <div id="passwordLayer">
+      <div class="lock-box" id="lockBox">
+        <div style="font-size: 40px; margin-bottom: 15px;">🔒</div>
+        <h3 style="margin:0 0 10px; color:#fff; letter-spacing: 1px;">私密備忘錄</h3>
+        <p style="color:#ccc; font-size:13px; margin-bottom: 0;">輸入密碼解鎖回憶</p>
+        <input type="tel" id="pwdInput" class="pwd-input" maxlength="4" placeholder="••••">
+        <button class="unlock-btn" onclick="checkPassword()">解鎖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-panel" id="panel-card">
+    <div class="close-card-btn" onclick="closeCard()">
+      <span class="close-icon">×</span>
+    </div>
+
+    <div class="letter-content">
+      <img src="DSCF1829.jpg" class="card-photo"> 
+      <h1 style="color:#fff; font-size: 24px; margin: 0; text-shadow: 0 0 20px rgba(168, 110, 122, 0.8);">To:鄭伍妏</h1>
+      <div class="final-msg">
+        對我來說<br>
+        妳真的很特別<br>
+	特別的程度就好比<br>
+        不惜花費一切<br>
+        也要收入囊中的寶物<br><br>
+
+        而且我從來沒有<br>
+        為了追一個女生<br>
+        費盡這麼多心思過<br><br>
+        
+        說實話<br>
+        一開始只是被妳的外表吸引<br>
+        也著迷妳那猜不透的神秘感<br>
+        但隨著對妳的了解越來越多<br>
+        喜歡的感覺漸漸變得獨特<br><br>
+
+        妳都問我喜歡妳什麼<br>
+        我喜歡<br>
+	妳跟我聊天時的共鳴<br>
+        我喜歡<br>
+	與妳相處時的自在<br>
+	我喜歡<br>
+        妳總是能夠給我<br>
+        其他人給不了的契合感<br><br>
+
+        感謝妳願意看到這邊<br>
+        不知道今天的告白<br>
+	妳覺得怎麼樣<br><br>
+
+        這些文字無法<br>
+	完整地表達我的心意<br>
+        那些說不出口的種種<br>
+        以及對妳說過的全部承諾<br>
+        我都會用實際的行動<br>
+	在未來向妳證明<br><br>
+
+        所以<br>
+        鄭伍妏<br><br><br><br>
+        妳願意<br>
+        跟我在一起嗎？<br>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ======================================================
+     🌌 混合特效：星星 + 流星 + 隨機愛語
+     ====================================================== */
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let entities = []; 
+
+  // 多國語言的「愛」
+  const loveWords = [
+      "Love", "愛", "Amor", "사랑", "Aşk", "Liebe", "Aimée", "Amore", "好き", 
+      "Dashuri", "Liefde", "Cinta", "Любовь", "Αγάπη", "Te amo"
+  ];
+
+  // ======================================================
+  // 🌟 星點慢慢排出圖案（不影響聊天內容）
+  // - 先維持一般星空漂浮
+  // - 過一段時間後，部分星點會逐步「集合」成星座符號（類似你給的圖）
+  // ======================================================
+  const CONSTELLATION = {
+    startAfterMs: 7000,     // 幾秒後開始慢慢集合
+    buildDurationMs: 22000, // 集合到位所需時間
+    holdMs: 12000,          // 停留一陣子
+    releaseMs: 8000,        // 再慢慢散回去
+    starUseRatio: 0.55      // 用多少比例的星星去排圖（避免太擠/太重）
+  };
+  let constellationTargets = [];
+  let constellationStartAt = performance.now();
+  let constellationPhase = 0; // 0 idle, 1 build, 2 hold, 3 release
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function easeInOutCubic(t){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
+
+  // 生成「巨蟹座」符號（♋）風格的點位：兩個漩渦 + S形連接
+  function buildCancerTargets(count) {
+    // 以畫面中心為基準的縮放
+    const cx = width * 0.52;
+    const cy = height * 0.44;
+    const scale = Math.min(width, height) * 0.23; // 圖案大小
+
+    const points = [];
+
+    // 左上漩渦
+    const c1x = cx - scale * 0.55;
+    const c1y = cy - scale * 0.30;
+    const r1  = scale * 0.28;
+
+    // 右下漩渦
+    const c2x = cx + scale * 0.55;
+    const c2y = cy + scale * 0.30;
+    const r2  = scale * 0.28;
+
+    // 兩個小圈 + 一段 S 形連接線
+    const circlePts = Math.floor(count * 0.55);
+    const linkPts   = count - circlePts;
+
+    const c1Pts = Math.floor(circlePts * 0.5);
+    const c2Pts = circlePts - c1Pts;
+
+    for (let i=0;i<c1Pts;i++){
+      const a = (i / c1Pts) * Math.PI * 2;
+      points.push({ x: c1x + Math.cos(a)*r1, y: c1y + Math.sin(a)*r1 });
+    }
+    for (let i=0;i<c2Pts;i++){
+      const a = (i / c2Pts) * Math.PI * 2;
+      points.push({ x: c2x + Math.cos(a)*r2, y: c2y + Math.sin(a)*r2 });
+    }
+
+    // S link: y = sin curve, x linear
+    const x0 = c1x + r1 * 0.55;
+    const x1 = c2x - r2 * 0.55;
+    for (let i=0;i<linkPts;i++){
+      const t = i/(linkPts-1 || 1);
+      const x = x0 + (x1-x0)*t;
+      const y = cy + Math.sin((t*2-1)*Math.PI/2) * (scale*0.22);
+      points.push({ x, y });
+    }
+
+    // 讓點分佈更均勻：打亂
+    for (let i = points.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [points[i], points[j]] = [points[j], points[i]];
+    }
+    return points;
+  }
+
+  function updateConstellationPhase() {
+    const now = performance.now();
+    const t = now - constellationStartAt;
+
+    if (t < CONSTELLATION.startAfterMs) {
+      constellationPhase = 0;
+      return { progress: 0, mode: 'idle' };
+    }
+
+    const t2 = t - CONSTELLATION.startAfterMs;
+
+    if (t2 < CONSTELLATION.buildDurationMs) {
+      constellationPhase = 1;
+      const p = easeInOutCubic(clamp01(t2 / CONSTELLATION.buildDurationMs));
+      return { progress: p, mode: 'build' };
+    }
+
+    const t3 = t2 - CONSTELLATION.buildDurationMs;
+
+    if (t3 < CONSTELLATION.holdMs) {
+      constellationPhase = 2;
+      return { progress: 1, mode: 'hold' };
+    }
+
+    const t4 = t3 - CONSTELLATION.holdMs;
+
+    if (t4 < CONSTELLATION.releaseMs) {
+      constellationPhase = 3;
+      const p = 1 - easeInOutCubic(clamp01(t4 / CONSTELLATION.releaseMs));
+      return { progress: p, mode: 'release' };
+    }
+
+    // 週期重來
+    constellationStartAt = performance.now();
+    constellationPhase = 0;
+    return { progress: 0, mode: 'idle' };
+  }
+
+
+  function initCanvas() {
+    // Use devicePixelRatio for crisper + smoother canvas while capping cost
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    createEntities();
+  }
+
+  // 1. 星星 Class
+  class Star {
+    constructor() {
+
+      this.type = 'star';
+      this.x = Math.random() * width; this.y = Math.random() * height; 
+      this.size = Math.random() * 2;
+      this.alpha = Math.random(); 
+      this.speedX = (Math.random() - 0.5) * 0.2;
+      this.speedY = (Math.random() - 0.5) * 0.2;
+      // constellation
+      this.tx = null; this.ty = null;
+      this.homeX = this.x; this.homeY = this.y;
+    }
+    draw() {
+
+      ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+    }
+    update(attract = 0) {
+      // 原本漂浮
+      this.x += this.speedX; this.y += this.speedY;
+      if(this.x < 0) this.x = width; if(this.x > width) this.x = 0;
+      if(this.y < 0) this.y = height; if(this.y > height) this.y = 0;
+      this.alpha += (Math.random() - 0.5) * 0.05;
+      if(this.alpha < 0.3) this.alpha = 0.3; if(this.alpha > 1) this.alpha = 1;
+
+      // 逐步集合到圖案：attract 0~1
+      if (attract > 0 && this.tx !== null && this.ty !== null) {
+        const strength = 0.018 + attract * 0.05;
+        this.x += (this.tx - this.x) * strength;
+        this.y += (this.ty - this.y) * strength;
+      }
+      // 釋放回原本星空分布：attract 越小越回 home
+      if (attract <= 0.001 && this.homeX !== null) {
+        this.x += (this.homeX - this.x) * 0.002;
+        this.y += (this.homeY - this.y) * 0.002;
+      }
+    }
+  }
+
+  // 2. 流星 Class
+  class Meteor {
+    constructor() { this.type = 'meteor'; this.reset(); }
+    reset() {
+      this.x = Math.random() * width + 200; this.y = -100;
+      this.speed = Math.random() * 5 + 10; this.len = Math.random() * 80 + 50; 
+      this.angle = Math.PI / 4 + (Math.random() * 0.2); 
+      this.opacity = 0; this.active = false;
+      setTimeout(() => { this.active = true; this.opacity = 1; }, Math.random() * 8000);
+    }
+    draw() {
+      if (!this.active) return;
+      const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.len * Math.cos(this.angle), this.y - this.len * Math.sin(this.angle));
+      gradient.addColorStop(0, `rgba(255,255,255,${this.opacity})`); gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = gradient; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x - this.len * Math.cos(this.angle), this.y + this.len * Math.sin(this.angle)); ctx.stroke();
+    }
+    update() {
+      if (!this.active) return; this.x -= this.speed * Math.cos(this.angle); this.y += this.speed * Math.sin(this.angle);
+      if (this.x < -100 || this.y > height + 100) { this.active = false; this.reset(); }
+    }
+  }
+
+  // 3. 愛語 Class
+  class LoveWord {
+    constructor() {
+      this.type = 'word';
+      this.reset();
+    }
+    reset() {
+      this.text = loveWords[Math.floor(Math.random() * loveWords.length)];
+      this.x = Math.random() * (width - 100) + 50;
+      this.y = Math.random() * (height - 100) + 50;
+      this.size = Math.random() * 14 + 12; 
+      this.maxOpacity = Math.random() * 0.5 + 0.2; 
+      this.fadeSpeed = Math.random() * 0.005 + 0.002;
+      this.opacity = 0;
+      this.state = 'in'; 
+      this.stayTime = Math.random() * 200 + 100;
+      this.timer = 0;
+    }
+    draw() {
+      ctx.font = `${this.size}px 'Noto Serif TC', serif`;
+      ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.text, this.x, this.y);
+    }
+    update() {
+      if (this.state === 'in') {
+        this.opacity += this.fadeSpeed;
+        if (this.opacity >= this.maxOpacity) this.state = 'stay';
+      } else if (this.state === 'stay') {
+        this.timer++;
+        if (this.timer >= this.stayTime) this.state = 'out';
+      } else if (this.state === 'out') {
+        this.opacity -= this.fadeSpeed;
+        if (this.opacity <= 0) this.reset();
+      }
+    }
+  }
+
+  function createEntities() {
+    entities = [];
+    const starCount = Math.min(Math.floor((width * height) / 7500), 220);
+    for (let i = 0; i < starCount; i++) entities.push(new Star());
+
+    // Keep a few meteors + words, but avoid overdraw on smaller screens
+    const meteorCount = width < 700 ? 2 : 3;
+    const wordCount = width < 700 ? 6 : 8;
+    for (let i = 0; i < meteorCount; i++) entities.push(new Meteor());
+    for (let i = 0; i < wordCount; i++) entities.push(new LoveWord());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    const { progress } = updateConstellationPhase();
+    entities.forEach(e => {
+      if (e.type === 'star') e.update(progress);
+      else e.update();
+      e.draw();
+    });
+    requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', initCanvas);
+  initCanvas();
+  animate();
+
+
+  /* ======================================================
+     💬 劇本 (已還原你的文字，並修正圖片格式)
+     ====================================================== */
+  const script = [
+    { type: 'date', text: '2026年 2月 8日' },
+    { type: 'msg',  text: '首先呢' },
+    { type: 'msg',  text: '我想跟妳說聲抱歉' },
+    { type: 'msg',  text: '現在的我 沒辦法拿著鮮花浪漫地跟妳告白' },
+    { type: 'msg',  text: '我想了好久 到底該怎麼做' },
+    { type: 'msg',  text: '才不會讓妳覺得隨便' },
+    { type: 'msg',  text: '才不會讓妳感到失望' },
+    { type: 'msg',  text: '其實這件事我已經在心中籌備好一陣子' },
+    { type: 'msg',  text: '只是永遠都達不到自己心中滿意的樣子' },
+    { type: 'msg',  text: '而且' },
+    { type: 'msg',  text: '昨天妳在電話裡說：我不覺得在這麼短的時間內是可以準備得怎麼樣' },
+    { type: 'msg',  text: '聽到的當下其實有點小走心' },
+    { type: 'msg',  text: '告白這件事 我真的惦記很久很久' },
+    { type: 'msg',  text: '也一直放在心上' },
+    { type: 'msg',  text: '所以？' },
+    { type: 'msg',  text: '妳準備好了嗎？' },
+    { type: 'msg',  text: '3' , extraDelay: 500 },
+    { type: 'msg',  text: '2' , extraDelay: 500 },
+    { type: 'msg',  text: '1' , extraDelay: 500 },
+
+    { type: 'date', text: '2025年 7月 27日' },
+    { type: 'msg',  text: '啊啊啊啊啊' },
+    { type: 'msg',  text: '今天被鄭伍妏回限動了' },
+    { type: 'msg',  text: '是我們第一次講到話' },
+    { type: 'msg',  text: '其實根本也沒聊到什麼' },
+    { type: 'msg',  text: '但還是好開心' },
+    { type: 'msg',  text: '今天' },
+    { type: 'msg',  text: '是張軒浩確診為暈船仔的第一天' },
+
+    { type: 'date', text: '2025年 8月 16日' },
+    { type: 'msg',  text: '這天說來也是很奇怪' },
+    { type: 'msg',  text: '半夜三點突然被問說有沒有吉他' },
+    { type: 'msg',  text: '當下其實連想都沒想 就答應下來了' },
+    { type: 'msg',  text: '又在前幾天刷reels的時候無意間看到妳想吃檸檬塔' },
+    { type: 'msg',  text: '我就跑去google全屏東市的糕點店' },
+    { type: 'msg',  text: '超級超級猶豫要不要買給妳' },
+    { type: 'msg',  text: '很怕自己做了什麼讓妳覺得多餘的事' },
+    { type: 'msg',  text: '當時只希望妳的表演順利' },
+    { type: 'msg',  text: '想必 還有夾雜著對妳的一點點喜歡吧' },    
+    { type: 'msg',  text: '反正呢' },
+    { type: 'msg',  text: '我以後還是會繼續買更多好吃的投餵妳' },
+
+    { type: 'date', text: '2025年 10月 11日' },
+    { type: 'msg',  text: '說到這天就很開心' },
+    { type: 'msg',  text: '今天是我們第一次出門' },
+    { type: 'msg',  text: '先去駁二看展覽 又去了旗津' },
+    { type: 'msg',  text: '但其實只要是跟妳一起' },
+    { type: 'msg',  text: '去哪邊好像也不是那麼重要了' },
+    { type: 'msg',  text: '還有還有' },
+    { type: 'msg',  text: '在沙灘上一起看的夕陽' },
+    { type: 'msg',  text: '我會記得很久很久' },
+    { type: 'msg',  text: '這是那天妳幫我拍的照片' },
+    { type: 'photo', text: '相片', src: '20251011.jpg', extraDelay: 2000 }, 
+
+    { type: 'date', text: '2025年 11月 30日' },
+    { type: 'msg',  text: '今天晚上 鄭伍妏突然對我打了超多預防針' },
+    { type: 'msg',  text: '她說 自己不是很能扮好女朋友的角色' },
+    { type: 'msg',  text: '她說 自己超任性 不講理 脾氣還很差' },
+    { type: 'msg',  text: '她說 需要一個情緒穩定的人才能治得了她' },
+    { type: 'msg',  text: '現在回頭看 我根本就是不二人選' },
+    { type: 'msg',  text: '妳看 連月老都這麼覺得' },
+    { type: 'photo', text: '相片', src: '20251130.jpg', extraDelay: 2000 }, 
+    { type: 'msg',  text: '螢幕前面的妳 也要點頭說對喔🫵🏻', extraDelay: 1000 },
+  
+    { type: 'date', text: '2025年 12月 25日' },
+    { type: 'msg',  text: '欸我跟妳說 其實我一度以為' },
+    { type: 'msg',  text: '我們聖誕節出門的事要泡湯了' },
+    { type: 'msg',  text: '因為第一次問妳的時候 妳說要上班' },
+    { type: 'msg',  text: '我直接一整個超難過' },
+    { type: 'msg',  text: '結果 結果 妳又突然找我出門了' },
+    { type: 'msg',  text: '跟妳相處的時候 心思整個都在妳身上' },
+    { type: 'msg',  text: '妳用心投入在某一件事情上的時候' },
+    { type: 'msg',  text: '對我來說真的超級有吸引力' },
+    { type: 'msg',  text: '回家之後 還看到妳寫給我的小紙條' },
+    { type: 'msg',  text: '雖然只有五個字 但讓我開心了一整個晚上' },
+    { type: 'photo', text: '相片', src: '20251225_1.jpg' },
+    { type: 'msg',  text: '然後這是少數有妳身影的照片' },
+    { type: 'photo', text: '相片', src: '20251225_2.jpg' },
+    { type: 'msg',  text: '那時候對於要跟妳一起拍照 真的太恐懼了' },
+    { type: 'msg',  text: '還是說 其實這個是害羞' },
+
+    { type: 'date', text: '2025年 12月 28日' },
+    { type: 'msg',  text: '至於今天嘛 就說不上開心了' },
+    { type: 'msg',  text: '好像是我搞砸一切的開始' },
+    { type: 'msg',  text: '現在回想這天發生的事 還是會被自己氣到' },
+    { type: 'msg',  text: '以後我會努力不讓這種事情發生的' },
+    { type: 'msg',  text: '還是代表那一天的張軒浩 跟妳說聲不好意思' },
+
+    { type: 'date', text: '2026年 1月 3日' },
+    { type: 'msg',  text: '今天從台南趕回屏東' },
+    { type: 'msg',  text: '滿心期待要跟妳拿生日卡片' },
+    { type: 'msg',  text: '但等來的 跟想像中有好大的落差' },
+    { type: 'msg',  text: '從妳把卡片遞給我的時候 我就知道說完蛋了' },
+    { type: 'msg',  text: '我真的以為 我們會老死不相往來' },
+    { type: 'msg',  text: '沒想到......' },
+
+    { type: 'date', text: '2026年 1月 23日' },
+    { type: 'msg',  text: '去屏東的路上' },
+    { type: 'msg',  text: '我' },
+    { type: 'msg',  text: '車禍了' },
+    { type: 'msg',  text: '結果到急診室 我第一個想到的人是妳' },
+    { type: 'msg',  text: '再三思考 還是決定要把這件事告訴妳' },
+    { type: 'msg',  text: '/silent' },
+    { type: 'msg',  text: '但好像也是因為這樣' },
+    { type: 'msg',  text: '整件事開始有了變化' },
+    { type: 'msg',  text: '真的很謝謝妳 在我住院的時候來探望我' },
+    { type: 'msg',  text: '還留給我小紙條跟超好吃的餅乾' },
+    { type: 'photo', text: '相片', src: '20260123.png' },
+
+    { type: 'date', text: '2026年 1月 29日' },
+    { type: 'msg',  text: '那如果此時此刻我還很清晰知道自己喜歡妳 手裡面還握著那個喜歡 能不能再讓我繼續朝妳邁進 我也不知道自己為什麼可以提這個離譜的要求 但我就是覺得自己還是很喜歡妳' },
+    { type: 'msg',  text: '我真的花了好大的勇氣才按下發送' },
+    { type: 'msg',  text: '超級怕妳會跟我說不要' },
+    { type: 'msg',  text: '真的很謝謝妳願意把那些妳在意的點都告訴我' },
+    { type: 'msg',  text: '也謝謝妳願意再考慮我一次' },
+    { type: 'msg',  text: '我一定會好好把握且奮不顧身地走向妳' },
+
+    { type: 'date', text: '2026年 1月 31日' },
+    { type: 'msg',  text: '今天解決了一個大危機' },
+    { type: 'msg',  text: '我都佩服自己了 妳知道嗎' },
+    { type: 'msg',  text: '根本就是拆除了一顆高難度的未爆彈' },
+    { type: 'msg',  text: '當下真的超不知所措' },
+    { type: 'msg',  text: '還記得嗎 我說過：' },
+    { type: 'msg',  text: '下一次 下下一次 下下下一次 好幾個下一次 都不會討厭妳 都不會對妳印象不好 我會努力跟今天一樣 等到妳最想告訴我的話' },
+    { type: 'msg',  text: '我保證 我一定會做到' },
+    { type: 'msg',  text: '我不會被妳推開 更不會把妳晾在一旁' },
+    { type: 'msg',  text: '情緒都會跟今天一樣穩定 也會好好陪著妳' },
+    { type: 'msg',  text: '所以 拜託妳相信我' },
+
+    { type: 'date', text: '現在' },
+    { type: 'msg',  text: '不知道妳覺得夠不夠用心' },
+    { type: 'msg',  text: '希望妳不會失望' },
+    { type: 'msg',  text: '我保證 漂漂亮亮的花 我之後一定會補給妳', extraDelay: 500 },
+  ];
+
+  const PASSWORD = "0206";
+  const chatArea = document.getElementById('chatArea');
+  const typingContainer = document.getElementById('typingContainer');
+  let step = 0;
+  let isUnlocked = false; 
+
+  const CONFIG = {
+    // 讓「正在輸入」更像真人：打字更久、閱讀停留更久（不改任何文字內容）
+    baseTyping: 900,
+    perCharTyping: 120,
+    baseRead: 1400,
+    perCharRead: 140,
+    // 上下限避免太誇張或太短
+    minTyping: 900,
+    maxTyping: 9000,
+    minRead: 1200,
+    maxRead: 12000
+  };
+
+  function calculateTiming(text) {
+    const len = text ? text.length : 0;
+
+    let typingTime = CONFIG.baseTyping + (len * CONFIG.perCharTyping);
+    let readTime = CONFIG.baseRead + (len * CONFIG.perCharRead);
+
+    // clamp
+    typingTime = Math.max(CONFIG.minTyping, Math.min(CONFIG.maxTyping, typingTime));
+    readTime = Math.max(CONFIG.minRead, Math.min(CONFIG.maxRead, readTime));
+
+    return { typingTime, readTime };
+  }
+
+  function runScript() {
+    if (step >= script.length) { setTimeout(() => { addUnlockButton(); }, 520); return; }
+    const item = script[step];
+    
+    if (item.type === 'date') {
+      addDateStamp(item.text); step++; setTimeout(runScript, 520); 
+    } 
+    else if (item.type === 'msg') {
+      const timing = calculateTiming(item.text);
+      const finalTypingTime = item.typingTime || timing.typingTime;
+      const finalReadTime = (item.readTime || timing.readTime) + (item.extraDelay || 0);
+      showTyping();
+      setTimeout(() => {
+        hideTyping(); addMessage(item.text);
+        setTimeout(() => { step++; runScript(); }, finalReadTime);
+      }, finalTypingTime);
+    }
+    else if (item.type === 'photo') {
+      showTyping();
+      setTimeout(() => {
+        hideTyping(); addPhotoBubble(item.text, item.src);
+        setTimeout(() => { step++; runScript(); }, (item.extraDelay || 2600)); 
+      }, 1500);
+    }
+  }
+
+  function addDateStamp(text) {
+    const div = document.createElement('div');
+    div.className = 'date-stamp'; div.innerText = text;
+    chatArea.appendChild(div); scrollToBottom();
+  }
+
+  function addMessage(text) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message-row';
+    msgDiv.innerHTML = `<div class="avatar-small"></div><div class="bubble">${text}</div>`;
+    chatArea.appendChild(msgDiv);
+    requestAnimationFrame(() => msgDiv.classList.add('show'));
+    scrollToBottom();
+  }
+
+  function addPhotoBubble(text, imgSrc) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message-row';
+    msgDiv.innerHTML = `
+      <div class="avatar-small"></div>
+      <div class="ig-media-bubble" onclick="togglePhotoView('${imgSrc}')">
+        <div class="ig-icon-circle"><span class="play-icon">▶</span></div>
+        ${text}
+      </div>
+    `;
+    chatArea.appendChild(msgDiv);
+    requestAnimationFrame(() => msgDiv.classList.add('show'));
+    scrollToBottom();
+  }
+
+  function togglePhotoView(imgSrc) {
+    const stage = document.getElementById('main-stage');
+    const photoPanel = document.getElementById('panel-photo');
+    const photoImg = document.querySelector('.photo-img');
+    const cardPanel = document.getElementById('panel-card');
+
+    if (cardPanel.classList.contains('active')) {
+      closeCard();
+      setTimeout(() => {
+        if (imgSrc) photoImg.src = imgSrc;
+        stage.classList.add('mode-active');
+        photoPanel.classList.add('active');
+      }, 800); 
+      return;
+    }
+
+    if (imgSrc) photoImg.src = imgSrc;
+
+    const isActive = photoPanel.classList.contains('active');
+    
+    if (isActive && (!imgSrc || photoImg.src.includes(imgSrc))) {
+      closePhotoView();
+    } else {
+      stage.classList.add('mode-active');
+      photoPanel.classList.add('active');
+    }
+  }
+
+  function closePhotoView() {
+    const stage = document.getElementById('main-stage');
+    const photoPanel = document.getElementById('panel-photo');
+    
+    photoPanel.classList.remove('active');
+    setTimeout(() => {
+      if (!document.querySelector('.glass-panel.active')) {
+        stage.classList.remove('mode-active');
+      }
+    }, 800);
+  }
+
+  function closeCard() {
+    const stage = document.getElementById('main-stage');
+    const cardPanel = document.getElementById('panel-card');
+    
+    cardPanel.classList.remove('active');
+    setTimeout(() => {
+      if (!document.querySelector('.glass-panel.active')) {
+        stage.classList.remove('mode-active');
+      }
+    }, 800);
+  }
+
+  function addUnlockButton() {
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'message-row system-row show';
+    btnContainer.innerHTML = `
+      <div class="unlock-msg-btn" onclick="showLockScreen()">
+        請妳收下這個 💌 
+      </div>
+    `;
+    chatArea.appendChild(btnContainer);
+    scrollToBottom();
+  }
+
+  function showLockScreen() {
+    if (isUnlocked) {
+      const photoPanel = document.getElementById('panel-photo');
+      if (photoPanel.classList.contains('active')) {
+        closePhotoView();
+        setTimeout(() => {
+          const stage = document.getElementById('main-stage');
+          const cardPanel = document.getElementById('panel-card');
+          stage.classList.add('mode-active');
+          cardPanel.classList.add('active');
+        }, 800);
+      } else {
+        const stage = document.getElementById('main-stage');
+        const cardPanel = document.getElementById('panel-card');
+        stage.classList.add('mode-active');
+        cardPanel.classList.add('active');
+      }
+      return;
+    }
+    const lockScreen = document.getElementById('passwordLayer');
+    lockScreen.style.display = 'flex';
+    setTimeout(() => { lockScreen.style.opacity = '1'; document.getElementById('pwdInput').focus(); }, 50);
+  }
+
+  function showTyping() { typingContainer.style.display = 'flex'; scrollToBottom(); }
+  function hideTyping() { typingContainer.style.display = 'none'; }
+  function scrollToBottom() {
+    // Smooth + reliable autoscroll after DOM updates
+    requestAnimationFrame(() => {
+      const prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const top = chatArea.scrollHeight;
+      try {
+        chatArea.scrollTo({ top, behavior: prefersReduce ? 'auto' : 'smooth' });
+      } catch (e) {
+        chatArea.scrollTop = top;
+      }
+    });
+  }
+
+  function checkPassword() {
+    const input = document.getElementById('pwdInput');
+    const lockBox = document.getElementById('lockBox');
+    const passwordLayer = document.getElementById('passwordLayer');
+    const stage = document.getElementById('main-stage');
+    const cardPanel = document.getElementById('panel-card');
+    const photoPanel = document.getElementById('panel-photo');
+
+    if (input.value === PASSWORD) {
+      isUnlocked = true;
+      passwordLayer.style.opacity = '0';
+      setTimeout(() => { passwordLayer.style.display = 'none'; }, 500);
+      
+      if (photoPanel.classList.contains('active')) {
+        closePhotoView();
+        setTimeout(() => {
+          stage.classList.add('mode-active');
+          cardPanel.classList.add('active');
+        }, 800); 
+      } else {
+        stage.classList.add('mode-active');
+        cardPanel.classList.add('active');
+      }
+      
+    } else {
+      lockBox.classList.add('shake');
+      input.value = ''; input.placeholder = "密碼錯誤";
+      setTimeout(() => lockBox.classList.remove('shake'), 500);
+    }
+  }
+
+  setTimeout(runScript, 1000);
+
+</script>
+</body>
+</html>
